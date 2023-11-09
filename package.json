@@ -1,0 +1,25 @@
+{
+	"name": "mobx-accessor",
+	"version": "0.0.0",
+	"author": "Gerald <gera2ld@live.com>",
+	"license": "MIT",
+	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "npm run build"
+	},
+	"keywords": ["mobx", "vuex"],
+	"files": ["lib"],
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"peerDependencies": {
+		"mobx": "^6.10.2"
+	},
+	"devDependencies": {
+		"mobx": "^6.10.2",
+		"typescript": "^5.2.2"
+	},
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
