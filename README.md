@@ -53,4 +53,23 @@ const accessor = makeAccessor({
 });
 
 // Now you can access everything from `accessor`
+accessor.increase();
+accessor.addUp(5);
+console.log(accessor.value, accessor.double);
+```
+
+Use it in a React component:
+
+```tsx
+import { observer } from 'mobx-react-lite';
+
+// All you need is to wrap your component using `accessor` with `observer`
+export default observer(function MyComponent() {
+  return (
+    <div>
+      <div>{accessor.value} * 2 = {accessor.double}</div>
+      <button onClick={accessor.increase}>Increase</button>
+    </div>
+  );
+});
 ```
