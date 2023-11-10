@@ -1,6 +1,6 @@
 {
 	"name": "mobx-accessor",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"author": "Gerald <gera2ld@live.com>",
 	"license": "MIT",
 	"scripts": {
@@ -9,17 +9,17 @@
 		"build": "run-s test build:js",
 		"prepublishOnly": "run-s build"
 	},
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.cjs"
+		}
+	},
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts",
 	"keywords": [
 		"mobx",
 		"vuex"
@@ -37,7 +37,7 @@
 		"npm-run-all": "^4.1.5",
 		"ts-jest": "^29.1.1",
 		"typescript": "^5.2.2",
-    "unbuild": "^1.2.1"
+		"unbuild": "^1.2.1"
 	},
 	"publishConfig": {
 		"access": "public",
