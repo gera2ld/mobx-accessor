@@ -111,7 +111,7 @@ export const actionTree = <
  * - `mutations`: always synchronous, can modify `state` directly, don't dispatch actions or call other mutations.
  * - `actions`: do not modify `state` directly, can access all properties
  */
-export function makeObservable<
+export function makeAccessor<
   S,
   G extends { [key: string]: GetterHandler<S> },
   M extends { [key: string]: MutationHandler<S> },
@@ -129,17 +129,49 @@ export function makeObservable<
   mutations?: M;
   actions?: A;
 }) {
-  return makeAutoObservable(
+  const initialState = state();
+  const stateKeys = Object.keys(initialState as object);
+  const getterKeys = Object.keys(getters || {});
+  const mutationKeys = Object.keys(mutations || {});
+
+  const makeProxy = (
+    keys: string[],
+    set?: (key: string, value: any) => void
+  ) => {
+    return Object.defineProperties(
+      {},
+      Object.fromEntries(
+        keys.map((key) => [
+          key,
+          {
+            get() {
+              return accessor[key];
+            },
+            set: set ? (value) => set(key, value) : undefined,
+          },
+        ])
+      )
+    );
+  };
+
+  const stateProxy = makeProxy(stateKeys) as S;
+  const getterProxy = makeProxy(getterKeys) as Getters<S, G>;
+  const mutationProxy = makeProxy(mutationKeys) as Mutations<S, M>;
+  const writableStateProxy = makeProxy(stateKeys, (key, value) => {
+    accessor[key as keyof S] = value;
+  }) as S;
+
+  const accessor = makeAutoObservable(
     Object.defineProperties(
       {
-        ...state(),
+        ...initialState,
 
         ...(mutations &&
           (Object.fromEntries(
             Object.entries(mutations).map(([key, mutate]) => [
               key,
-              function value(this: S, ...args: any[]) {
-                return mutate(this, ...args);
+              function value(...args: any[]) {
+                return mutate(writableStateProxy, ...args);
               },
             ])
           ) as unknown as Mutations<S, M>)),
@@ -151,9 +183,9 @@ export function makeObservable<
               function value(this: Accessor<S, G, M, A>, ...args: any[]) {
                 return action(
                   {
-                    state: this,
-                    getters: this,
-                    mutations: this,
+                    state: stateProxy,
+                    getters: getterProxy,
+                    mutations: mutationProxy,
                   },
                   ...args
                 );
@@ -168,8 +200,8 @@ export function makeObservable<
           ? Object.entries(getters).map(([key, getter]) => [
               key,
               {
-                get(this: Accessor<S, G, M, A>) {
-                  return getter(this, this);
+                get() {
+                  return getter(stateProxy, getterProxy);
                 },
                 // required to allow the getter to be processed by `mobx`
                 configurable: true,
@@ -179,4 +211,5 @@ export function makeObservable<
       ])
     )
   ) as Accessor<S, G, M, A>;
+  return accessor;
 }
