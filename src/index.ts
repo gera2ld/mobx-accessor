@@ -79,23 +79,20 @@ export const actionTree = <
   tree: T,
 ): T => tree;
 
-function makeProxy(target: unknown, keys: string[], set = false) {
-  return Object.defineProperties(
-    {},
-    Object.fromEntries(
-      keys.map((key) => [
-        key,
-        {
-          get() {
-            return target[key];
+function makeReadOnlyProxy(target: unknown, keys: string[]) {
+  return Object.seal(
+    Object.defineProperties(
+      {},
+      Object.fromEntries(
+        keys.map((key) => [
+          key,
+          {
+            get() {
+              return target[key];
+            },
           },
-          set: set
-            ? (value) => {
-                target[key] = value;
-              }
-            : undefined,
-        },
-      ]),
+        ]),
+      ),
     ),
   );
 }
@@ -212,15 +209,14 @@ export function makeAccessor<
     ),
   ) as Accessor<S, G, M, A>;
 
-  const stateProxy = makeProxy(stateData, stateKeys) as S;
-  const getterProxy = makeProxy(
+  const stateProxy = makeReadOnlyProxy(stateData, stateKeys) as S;
+  const getterProxy = makeReadOnlyProxy(
     accessor,
     Object.keys(getters || {}),
   ) as Getters<S, G>;
-  const mutationProxy = makeProxy(
+  const mutationProxy = makeReadOnlyProxy(
     accessor,
     Object.keys(mutations || {}),
-    true,
   ) as Mutations<S, M>;
 
   (accessor as any)[symbolState] = stateData;
@@ -249,7 +245,7 @@ export function loadState<
   },
 >(accessor: Accessor<S, G, M, A>, state: S) {
   const stateData = (accessor as any)[symbolState];
-  Object.keys(stateData).forEach(key => {
+  Object.keys(stateData).forEach((key) => {
     stateData[key] = state[key];
   });
 }
