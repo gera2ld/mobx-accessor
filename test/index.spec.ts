@@ -62,4 +62,9 @@ test('accessor', () => {
   accessor.addUp(5);
   expect(accessor.value).toBe(6);
   expect(accessor.double).toBe(12);
+
+  // Not allowed to modify state directly
+  expect(() => {
+    accessor.value += 1;
+  }).toThrow();
 });

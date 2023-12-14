@@ -14,7 +14,7 @@ type Mutations<S, M extends { [key: string]: MutationHandler<S> }> = {
 type InjectStore<
   S,
   G extends { [key: string]: (state: S) => any },
-  M extends { [key: string]: MutationHandler<S> }
+  M extends { [key: string]: MutationHandler<S> },
 > = {
   state: S;
   getters: Getters<S, G>;
@@ -24,7 +24,7 @@ type InjectStore<
 type ActionHandler<
   S,
   G extends { [key: string]: GetterHandler<S> },
-  M extends { [key: string]: MutationHandler<S> }
+  M extends { [key: string]: MutationHandler<S> },
 > = (store: InjectStore<S, G, M>, payload?: any) => any;
 type Actions<
   S,
@@ -32,7 +32,7 @@ type Actions<
   M extends { [key: string]: MutationHandler<S> },
   A extends {
     [key: string]: ActionHandler<S, G, M>;
-  }
+  },
 > = {
   [P in keyof A]: (...args: DropFirst<Parameters<A[P]>>) => ReturnType<A[P]>;
 };
@@ -42,20 +42,20 @@ type Accessor<
   M extends { [key: string]: MutationHandler<S> },
   A extends {
     [key: string]: ActionHandler<S, G, M>;
-  }
+  },
 > = S & Getters<S, G> & Mutations<S, M> & Actions<S, G, M, A>;
 
 export const getterTree = <S, T extends { [key: string]: GetterHandler<S> }>(
   _: { state: () => S },
-  tree: T
+  tree: T,
 ): T => tree;
 
 export const mutationTree = <
   S,
-  T extends { [key: string]: MutationHandler<S> }
+  T extends { [key: string]: MutationHandler<S> },
 >(
   _: { state: () => S },
-  tree: T
+  tree: T,
 ): T => tree;
 
 export const actionTree = <
@@ -69,13 +69,34 @@ export const actionTree = <
         getters: Getters<S, G>;
         mutations: Mutations<S, M>;
       },
-      payload?: any
+      payload?: any,
     ) => any;
-  }
+  },
 >(
   _: { state: () => S; getters?: G; mutations?: M },
-  tree: T
+  tree: T,
 ): T => tree;
+
+function makeProxy(target: unknown, keys: string[], set = false) {
+  return Object.defineProperties(
+    {},
+    Object.fromEntries(
+      keys.map((key) => [
+        key,
+        {
+          get() {
+            return target[key];
+          },
+          set: set
+            ? (value) => {
+                target[key] = value;
+              }
+            : undefined,
+        },
+      ]),
+    ),
+  );
+}
 
 /**
  * `mobx` will make such an object observable:
@@ -117,7 +138,7 @@ export function makeAccessor<
   M extends { [key: string]: MutationHandler<S> },
   A extends {
     [key: string]: ActionHandler<S, G, M>;
-  }
+  },
 >({
   state,
   getters,
@@ -129,51 +150,20 @@ export function makeAccessor<
   mutations?: M;
   actions?: A;
 }) {
-  const initialState = state();
-  const stateKeys = Object.keys(initialState as object);
-  const getterKeys = Object.keys(getters || {});
-  const mutationKeys = Object.keys(mutations || {});
-
-  const makeProxy = (
-    keys: string[],
-    set?: (key: string, value: any) => void
-  ) => {
-    return Object.defineProperties(
-      {},
-      Object.fromEntries(
-        keys.map((key) => [
-          key,
-          {
-            get() {
-              return accessor[key];
-            },
-            set: set ? (value) => set(key, value) : undefined,
-          },
-        ])
-      )
-    );
-  };
-
-  const stateProxy = makeProxy(stateKeys) as S;
-  const getterProxy = makeProxy(getterKeys) as Getters<S, G>;
-  const mutationProxy = makeProxy(mutationKeys) as Mutations<S, M>;
-  const writableStateProxy = makeProxy(stateKeys, (key, value) => {
-    accessor[key as keyof S] = value;
-  }) as S;
+  const stateData = makeAutoObservable(state() as object) as S;
+  const stateKeys = Object.keys(stateData as object);
 
   const accessor = makeAutoObservable(
     Object.defineProperties(
       {
-        ...initialState,
-
         ...(mutations &&
           (Object.fromEntries(
             Object.entries(mutations).map(([key, mutate]) => [
               key,
               function value(...args: any[]) {
-                return mutate(writableStateProxy, ...args);
+                return mutate(stateData, ...args);
               },
-            ])
+            ]),
           ) as unknown as Mutations<S, M>)),
 
         ...(actions &&
@@ -187,29 +177,49 @@ export function makeAccessor<
                     getters: getterProxy,
                     mutations: mutationProxy,
                   },
-                  ...args
+                  ...args,
                 );
               },
-            ])
+            ]),
           )),
       },
 
       // convert getter definitions into real getters
+      // Note: `configurable` must be `true` for `mobx` to process the getters
       Object.fromEntries([
-        ...(getters
-          ? Object.entries(getters).map(([key, getter]) => [
-              key,
-              {
-                get() {
-                  return getter(stateProxy, getterProxy);
-                },
-                // required to allow the getter to be processed by `mobx`
-                configurable: true,
-              },
-            ])
-          : []),
-      ])
-    )
+        ...stateKeys.map((key) => [
+          key,
+          {
+            get() {
+              return stateData[key];
+            },
+            configurable: true,
+          },
+        ]),
+
+        ...Object.entries(getters || {}).map(([key, getter]) => [
+          key,
+          {
+            get() {
+              return getter(stateProxy, getterProxy);
+            },
+            configurable: true,
+          },
+        ]),
+      ]),
+    ),
   ) as Accessor<S, G, M, A>;
+
+  const stateProxy = makeProxy(stateData, stateKeys) as S;
+  const getterProxy = makeProxy(
+    accessor,
+    Object.keys(getters || {}),
+  ) as Getters<S, G>;
+  const mutationProxy = makeProxy(
+    accessor,
+    Object.keys(mutations || {}),
+    true,
+  ) as Mutations<S, M>;
+
   return accessor;
 }
