@@ -1,4 +1,6 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, toJS } from 'mobx';
+
+const symbolState = Symbol('mobxAccessorState');
 
 type DropFirst<T extends unknown[]> = T extends [any, ...infer U] ? U : never;
 
@@ -221,5 +223,33 @@ export function makeAccessor<
     true,
   ) as Mutations<S, M>;
 
+  (accessor as any)[symbolState] = stateData;
+
   return accessor;
+}
+
+export function dumpState<
+  S,
+  G extends { [key: string]: GetterHandler<S> },
+  M extends { [key: string]: MutationHandler<S> },
+  A extends {
+    [key: string]: ActionHandler<S, G, M>;
+  },
+>(accessor: Accessor<S, G, M, A>) {
+  const stateData = (accessor as any)[symbolState];
+  return toJS(stateData);
+}
+
+export function loadState<
+  S,
+  G extends { [key: string]: GetterHandler<S> },
+  M extends { [key: string]: MutationHandler<S> },
+  A extends {
+    [key: string]: ActionHandler<S, G, M>;
+  },
+>(accessor: Accessor<S, G, M, A>, state: S) {
+  const stateData = (accessor as any)[symbolState];
+  Object.keys(stateData).forEach(key => {
+    stateData[key] = state[key];
+  });
 }

@@ -3,6 +3,8 @@ import {
   getterTree,
   makeAccessor,
   mutationTree,
+  dumpState,
+  loadState,
 } from '../src/index';
 
 test('accessor', () => {
@@ -67,4 +69,14 @@ test('accessor', () => {
   expect(() => {
     accessor.value += 1;
   }).toThrow();
+
+  expect(dumpState(accessor)).toEqual({
+    value: 6,
+  });
+
+  loadState(accessor, {
+    value: 2,
+  });
+  expect(accessor.value).toBe(2);
+  expect(accessor.double).toBe(4);
 });
