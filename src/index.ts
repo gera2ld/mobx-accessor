@@ -1,4 +1,4 @@
-import { makeAutoObservable, toJS } from 'mobx';
+import { action, makeAutoObservable, toJS } from 'mobx';
 
 const symbolState = Symbol('mobxAccessorState');
 
@@ -159,9 +159,9 @@ export function makeAccessor<
           (Object.fromEntries(
             Object.entries(mutations).map(([key, mutate]) => [
               key,
-              function value(...args: any[]) {
+              action(function value(...args: any[]) {
                 return mutate(stateData, ...args);
-              },
+              }),
             ]),
           ) as unknown as Mutations<S, M>)),
 
@@ -236,7 +236,7 @@ export function dumpState<
   return toJS(stateData);
 }
 
-export function loadState<
+export const loadState = action(function loadState<
   S,
   G extends { [key: string]: GetterHandler<S> },
   M extends { [key: string]: MutationHandler<S> },
@@ -248,4 +248,4 @@ export function loadState<
   Object.keys(stateData).forEach((key) => {
     stateData[key] = state[key];
   });
-}
+});
