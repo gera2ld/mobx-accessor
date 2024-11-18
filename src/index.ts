@@ -2,7 +2,7 @@ import { action, makeAutoObservable, toJS } from 'mobx';
 
 const symbolState = Symbol('mobxAccessorState');
 
-type DropFirst<T extends unknown[]> = T extends [any, ...infer U] ? U : never;
+type DropFirst<T extends unknown[]> = T extends [any, ...infer U] ? U : [];
 
 type MutationHandler<S> = (state: S, payload?: any) => void;
 type GetterHandler<S> = (state: S, getters?: any) => any;
